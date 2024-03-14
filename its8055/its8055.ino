@@ -12,6 +12,8 @@
 */
 #include <M5StickC.h>
 #include <driver/i2s.h>
+#include <WiFi.h>
+#include <WiFiClient.h>
 
 #define PIN_CLK     0
 #define PIN_DATA    34
@@ -21,6 +23,15 @@ uint8_t BUFFER[READ_LEN] = {0};
 
 uint16_t oldy[160];
 int16_t *adcBuffer = NULL;
+
+
+// Set these values according to your configuration.
+const char* ssid = "SSID";
+const char* password = "superSecret";
+const char* serverIP = "196.168.1.116";
+const int serverPort = 1234;
+
+WiFiClient client;
 
 void i2sInit()  // Init I2S.  初始化I2S
 {
@@ -94,6 +105,8 @@ void setup() {
     M5.Lcd.setTextColor(BLACK, WHITE);
     M5.Lcd.println("mic test");
 
+    WiFi.begin(ssid, password);
+
     i2sInit();
     xTaskCreate(mic_record_task, "mic_record_task", 2048, NULL, 1, NULL);
 }
@@ -102,7 +115,36 @@ The loop() function is an infinite loop in which the program runs repeatedly
 在setup()函数中的程序执行完后，会接着执行loop()函数中的程序
 loop()函数是一个死循环，其中的程序会不断的重复运行 */
 void loop() {
-    printf("loop cycling\n");
-    vTaskDelay(1000 / portTICK_RATE_MS);  // otherwise the main task wastes half
-                                          // of the cpu cycles
+  static uint32_t startTime = 0;
+  static bool isRecording = false;
+
+  if (!isRecording){
+    startTime = millis();
+    isRecording = true;
+  }
+
+  if (millis() - startTime <= 2 * 60 * 1000) {
+    printf("Recording...\n");
+    vTaskDelay(1000 / portTICK_RATE_MS);
+
+    // Send the recorded sound data over the network
+    if (client.connected()){
+      client.write((const uint8_t*)BUFFER, READ_LEN);
+    }
+  }else{
+    printf("Recording finished.\n");
+    isRecording = false;
+
+    // Disconnect from the server
+    if (client.connected()){
+      client.stop();
+    }
+  }
+
+  // Connect to the server if not already connected
+  if (!client.connected()){
+    if(client.connect(serverIP, serverPort)){
+      printf("Connected to server.\n");
+    }
+  }
 }
