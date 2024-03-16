@@ -1,19 +1,25 @@
 import socket
-import numpy as np
+
 import matplotlib.pyplot as plt
-import time
+import numpy as np
 
 # Server configuration
 HOST = '0.0.0.0'  # Listen on all available network interfaces
 PORT = 1234  # Port number to listen on
 BUFFER_SIZE = 4096  # Size of the receive buffer
 
+
 def save_sound_data(data):
     # Save the received sound data to a file
     with open('sound_data.bin', 'ab') as file:
         file.write(data)
 
-def visualize_sound_data(data):
+
+def visualize_sound_data():
+    # Read the saved sound data from the file
+    with open('sound_data.bin', 'rb') as file:
+        data = file.read()
+
     # Convert the received data to numpy array
     sound_data = np.frombuffer(data, dtype=np.int16)
 
@@ -41,6 +47,7 @@ def visualize_sound_data(data):
     plt.ylabel('Magnitude')
     plt.show()
 
+
 def start_server():
     # Create a TCP socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -63,14 +70,18 @@ def start_server():
             if not data:
                 break
             save_sound_data(data)
-            visualize_sound_data(data)
 
         # Close the client connection
         client_socket.close()
         print('Client disconnected')
 
-    # Close the server socket
-    server_socket.close()
+        # Visualize the received sound data
+        visualize_sound_data()
+
+        # Close the server socket
+        server_socket.close()
+
 
 if __name__ == '__main__':
-    start_server()
+    # start_server()
+    visualize_sound_data()

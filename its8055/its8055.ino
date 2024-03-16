@@ -24,6 +24,8 @@ uint8_t BUFFER[READ_LEN] = { 0 };
 uint16_t oldy[160];
 int16_t *adcBuffer = NULL;
 
+uint32_t startTime = 0;
+bool isRecording = false;
 
 // Set these values according to your configuration.
 const char *ssid = "Kein Netz";
@@ -124,20 +126,19 @@ loop()函数是一个死循环，其中的程序会不断的重复运行 */
 void loop() {
   static uint32_t startTime = 0;
   static bool isRecording = false;
+  static WiFiClient client;
 
   M5.lcd.setCursor(0, 40);
-  M5.lcd.printf("Connecting to: %s\n", serverIP);
 
-  WiFiClient client;
-  // Connect to the server if not already connected
-  if (!client.connect(
-        serverIP,
-        serverPort)) {  // Connect to the server. 0 is returned if the
-                        // connection fails. 连接服务器,若连接失败返回0
-    M5.lcd.print(
-      "Connection failed.\nWaiting 5 seconds before retrying...\n");
-    delay(5000);
-    return;
+  // Connect to the server only once
+  if (!client.connected()) {
+    M5.lcd.printf("Connecting to: %s\n", serverIP);
+    if (!client.connect(serverIP, serverPort)) {
+      M5.lcd.print("Connection failed.\nWaiting 5 seconds before retrying...\n");
+      delay(5000);
+      return;
+    }
+    M5.lcd.println("Connected to server");
   }
 
   if (!isRecording) {
@@ -156,11 +157,10 @@ void loop() {
   } else {
     M5.lcd.print("Recording finished.\n");
     isRecording = false;
-  }
+    client.stop();
 
-  M5.lcd.println("Closing connection.");
-  client.stop();
-  M5.lcd.println("Waiting 5 seconds before restarting...");
-  delay(5000);
-  M5.lcd.fillRect(0, 40, 320, 220, BLACK);
+    M5.lcd.println("Waiting 5 seconds before restarting...");
+    delay(5000);
+    M5.lcd.fillRect(0, 40, 320, 220, BLACK);
+  }
 }
